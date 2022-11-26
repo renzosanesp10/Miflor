@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import Dashboard from './pages/ventas/Dashboard';
+import Dashboardprod from './pages/products/Dashboardprod';
 import {
     createBrowserRouter,
     RouterProvider,
@@ -16,6 +17,10 @@ const router = createBrowserRouter([
     {
         path: "/dashboard",
         element: <Dashboard/>,
+    },
+    {
+        path: "/dashboard-products",
+        element: <Dashboardprod/>,
     },
   ]);
 
