@@ -11,7 +11,7 @@ export default function Dashboardprod(){
                         Registrar producto
                     </button>
                 </div>
-                <table class="table">
+                <table className="table" style={{ width: "1000px", margin: "auto" }}>
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
