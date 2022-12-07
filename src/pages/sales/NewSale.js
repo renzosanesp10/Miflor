@@ -21,7 +21,7 @@ export default function NewSale() {
                 </div>
                 <div className="form-group">
                     <label htmlFor="formGroupExampleInput2">Productos seleccionados</label>
-                    <select class="form-control" id="exampleFormControlSelect1">
+                    <select className="form-control" id="exampleFormControlSelect1">
                         <option>Huevos</option>
                         <option>leche</option>
                         <option>yogurt</option>

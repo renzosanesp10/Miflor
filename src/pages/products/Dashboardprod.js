@@ -1,6 +1,30 @@
+import React, {useState, useEffect} from "react";
+
+import firebaseApp from "../../firebase/Firebase";
+import { getFirestore, collection, getDocs, deleteDoc} from "firebase/firestore";
 import NavBarc from "../../components/Navbar";
 
+
 export default function Dashboardprod(){
+    const firestore = getFirestore(firebaseApp);
+
+    const [productos, setProductos] = useState( [] )
+
+    const productsCollection = collection(firestore, "productos")
+
+    const getProducts = async () => {
+        const data = await getDocs(productsCollection)
+        setProductos(
+            data.docs.map( (doc) => ( {...doc.data(), id: doc.uid}))
+        )
+        console.log(productos)
+    }
+    
+    useEffect( () =>{
+        getProducts()
+    }, [])
+    
+
     return(
         <>
         <NavBarc />
@@ -24,64 +48,16 @@ export default function Dashboardprod(){
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr>
-                        <tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr><tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr><tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr><tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr><tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr><tr>
-                            <th scope="row">1</th>
-                            <td>Leche</td>
-                            <td>Leche deslactosada marca Gloria </td>
-                            <td>20</td>
-                            <td>Gloria</td>
-                            <td>Abarrotes</td>
-                            <td>S/ 4.50</td>
-                        </tr>
+                        { productos.map((product =>{
+                            <tr key={product.uid} >
+                                <td>{product.name}</td>
+                                <td>{product.description}</td>
+                                <td>{product.stock}</td>
+                                <td>{product.supplier}</td>
+                                <td>{product.category}</td>
+                                <td>{product.price}</td>
+                            </tr>
+                        })) }
                     </tbody>
                 </table>
             </div>

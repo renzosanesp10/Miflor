@@ -1,6 +1,7 @@
 
 
 const NavBarc = () => {
+
     return (
         <>
             <nav className="navbar navbar-expand justify-content-between px-3" style={{backgroundColor: "#e3f2fd"}}>
