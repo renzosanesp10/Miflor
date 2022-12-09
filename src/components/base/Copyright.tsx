@@ -9,7 +9,7 @@ export const Copyright: React.FC<Props> = ({ sx }) => {
     <Typography variant='body2' color='text.secondary' align='center' sx={sx}>
       {'Copyright © '}
       <Link color='inherit' href='https://mui.com/'>
-        Your Website
+        Panaderia Mi Flor
       </Link>{' '}
       {new Date().getFullYear()}
       {'.'}

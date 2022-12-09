@@ -54,7 +54,7 @@ export const Login = () => {
         <LockOutlinedIcon />
       </Avatar>
       <Typography component='h1' variant='h5'>
-        Sign in
+        Iniciar Sesion
       </Typography>
       <Box component='form' noValidate onSubmit={handleSubmit} sx={{ mt: 1 }}>
         <TextField
@@ -62,7 +62,7 @@ export const Login = () => {
           required
           fullWidth
           id='email'
-          label='Email Address'
+          label='Correo Electronico'
           name='email'
           autoComplete='email'
           autoFocus
@@ -72,14 +72,14 @@ export const Login = () => {
           required
           fullWidth
           name='password'
-          label='Password'
+          label='Contraseña'
           type='password'
           id='password'
           autoComplete='current-password'
         />
         <FormControlLabel
           control={<Checkbox value='remember' color='primary' />}
-          label='Remember me'
+          label='Recuerdame'
         />
         <Button
           type='submit'
@@ -87,7 +87,7 @@ export const Login = () => {
           variant='contained'
           sx={{ mt: 3, mb: 2 }}
         >
-          Sign In
+          Iniciar Sesion
         </Button>
         <Copyright sx={{ mt: 5 }} />
       </Box>
