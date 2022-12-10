@@ -16,7 +16,7 @@ import MuiDrawer from '@mui/material/Drawer'
 import MenuIcon from '@mui/icons-material/Menu'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import { Copyright } from '../components/base/Copyright'
-import { mainListItems, secondaryListItems } from '../components/base/ListItems'
+import { mainListItems} from '../components/base/ListItems'
 import { AuthContext } from '../contexts/AuthContext'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { getAuth, signOut } from 'firebase/auth'
@@ -166,8 +166,6 @@ export const DashboardLayout: React.FC<Props> = ({
         <Divider />
         <List component='nav'>
           {mainListItems}
-          <Divider sx={{ my: 1 }} />
-          {secondaryListItems}
         </List>
       </Drawer>
       <Box
