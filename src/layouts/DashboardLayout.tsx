@@ -4,19 +4,18 @@ import {
   Toolbar,
   Typography,
   IconButton,
-  Badge,
   Divider,
   List,
   Container,
   styled,
-  Grid
+  Drawer as MuiDrawer,
+  AppBar as MuiAppBar,
+  AppBarProps as MuiAppBarProps
 } from '@mui/material'
-import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar'
-import MuiDrawer from '@mui/material/Drawer'
 import MenuIcon from '@mui/icons-material/Menu'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import { Copyright } from '../components/base/Copyright'
-import { mainListItems, secondaryListItems } from '../components/base/ListItems'
+import { mainListItems } from '../components/base/ListItems'
 import { AuthContext } from '../contexts/AuthContext'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { getAuth, signOut } from 'firebase/auth'
@@ -74,12 +73,12 @@ const Drawer = styled(MuiDrawer, {
 
 interface Props {
   children: React.ReactNode
-  username?: string
+  title?: string
 }
 
 export const DashboardLayout: React.FC<Props> = ({
   children,
-  username = 'Joseph'
+  title = 'Dashboard'
 }) => {
   const auth = getAuth()
   const route = useRouter()
@@ -128,7 +127,7 @@ export const DashboardLayout: React.FC<Props> = ({
             noWrap
             sx={{ flexGrow: 1 }}
           >
-            Dashboard
+            {title}
           </Typography>
           <Box
             sx={{
@@ -166,8 +165,8 @@ export const DashboardLayout: React.FC<Props> = ({
         <Divider />
         <List component='nav'>
           {mainListItems}
-          <Divider sx={{ my: 1 }} />
-          {secondaryListItems}
+          {/* <Divider sx={{ my: 1 }} /> */}
+          {/*secondaryListItems*/}
         </List>
       </Drawer>
       <Box
