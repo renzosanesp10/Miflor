@@ -18,25 +18,56 @@ import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import PersonAddOutlined from '@mui/icons-material/PersonAddOutlined';
-import { Firestore } from 'firebase/firestore';
-
+import { firebaseApp } from '../../config/firebase';
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import {getFirestore , doc, setDoc, Firestore } from "firebase/firestore";
+const auth = getAuth(firebaseApp);
 
 const theme = createTheme();
-
 const roles = [
     {
-        label: 'Administrador'
+        label: 'Administrador',
+        value: 'Administrador'
     },
     {
-        label: 'Produccion'
+        label: 'Produccion',
+        value: 'Produccion'
     },
     {
-        label: 'Ventas'
+        label: 'Ventas',    
+        value: 'Ventas'
     }
 ];
 
 export const Register = () => {
     const [rol, setRol] = React.useState('Ventas')
+
+    const firestore = getFirestore(firebaseApp);
+
+    async function registrarUsuario(email:string , password:string  , name:string  , rol: string) {
+        const infoUsuario = await createUserWithEmailAndPassword(
+            auth, 
+            email, 
+            password
+            ).then((usuarioFirebase) => {
+                return usuarioFirebase
+            });
+
+            console.log(infoUsuario.user.uid);
+            const docuRef = doc(firestore, `usuarios/${infoUsuario.user.uid}`);
+            setDoc(docuRef, {name: name, email: email, rol: rol});    
+    }
+
+    function submitHandler(e: React.FormEvent<HTMLFormElement>){
+        e.preventDefault();
+        const name = e.target.elements.name.value;
+        const email = e.target.elements.email.value;
+        const rol = e.target.elements.rol.value;
+        const password = e.target.elements.password.value;
+
+        console.log("submit", name , email, rol, password);
+        registrarUsuario(email , password , name , rol);
+    }
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setRol(event.target.value);
@@ -58,76 +89,63 @@ export const Register = () => {
                         <PersonAddOutlined />
                     </Avatar>
                     <Typography component="h1" variant="h5">
-                        Registrarse
+                        Registrar nuevo Usuario
                     </Typography>
-                    <Box component="form" /*/onSubmit={handleSubmit}/*/ noValidate sx={{ mt: 1 }}>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    autoComplete="given-name"
-                                    name="firstName"
-                                    required
-                                    fullWidth
-                                    id="firstName"
-                                    label="First Name"
-                                    autoFocus
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    required
-                                    fullWidth
-                                    id="lastName"
-                                    label="Last Name"
-                                    name="lastName"
-                                    autoComplete="family-name"
-                                />
-                            </Grid>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                margin="normal"
-                                required
-                                fullWidth
-                                id="email"
-                                label="Correo Electronico"
-                                name="email"
-                                autoComplete="email"
-                                autoFocus
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                margin="normal"
-                                required
-                                fullWidth
-                                name="password"
-                                label="Contraseña"
-                                type="password"
-                                id="password"
-                                autoComplete="current-password"
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                id="rol"
-                                required
-                                fullWidth
-                                select
-                                margin="normal"
-                                name="rol"
-                                label="Seleccionar"
-                                value={rol}
-                                onChange={handleChange}
-                                helperText="Porfavor seleccionar el Rol"
-                            >
-                                {roles.map((option) => (
-                                    <option>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </TextField>
-                        </Grid>
+                    <Box component="form" onSubmit={submitHandler} noValidate sx={{ mt: 1 }}>
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            id="name"
+                            label="Nombres y Apellidos"
+                            name="name"
+                            autoComplete="Nombres y Apellidos"
+                            autoFocus
+                        />
+
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            id="email"
+                            label="Correo Electronico"
+                            name="email"
+                            autoComplete="Correo Electronico"
+                            autoFocus
+                        />
+
+
+                        <TextField
+                            id="rol"
+                            required
+                            fullWidth
+                            select
+                            margin="normal"
+                            name="rol"
+                            label="Seleccionar"
+                            value={rol}
+                            onChange={handleChange}
+                            helperText="Porfavor seleccionar el Rol"
+                            autoComplete="current-rol"
+                        >
+                            {roles.map((option) => (
+                                <option>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </TextField>
+
+                        <TextField
+                            margin="normal"
+                            required
+                            fullWidth
+                            name="password"
+                            label="Contraseña"
+                            type="password"
+                            id="password"
+                            autoComplete="current-password"
+                        />
+
 
                         <Button
                             type="submit"

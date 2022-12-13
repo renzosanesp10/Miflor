@@ -45,17 +45,34 @@ const AuthProvider: React.FC<Props> = ({ children }) => {
     }
   }
 
+  const getUserRole = async (uid: string) => {
+    const docRef = doc(db, 'roles', uid)
+    const docSnap = await getDoc(docRef)
+
+    if (docSnap.exists()) {
+      return docSnap.data()
+    } else {
+      console.error('No role exits')
+    }
+  }
+
   useEffect(() => {
     onAuthStateChanged(auth, async user => {
       if (user) {
         // User is signed in, see docs for a list of available properties
         // https://firebase.google.com/docs/reference/js/firebase.User
         const uid = user.uid
+        let rol = ''
         /* console.log(user) */
         const data = (await getUserInfo(uid)) as AuthInfo
         /* console.log('DATA', data) */
+        const userRole = await getUserRole(data.rol)
+        if (userRole) {
+          rol = userRole.rol
+          /* console.log('ROL', userRole.rol) */
+        }
         if (data) {
-          setUserAuth({ ...data, uid })
+          setUserAuth({ ...data, uid, rol })
         }
       } else {
         // User is signed out
