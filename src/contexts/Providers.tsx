@@ -1,9 +1,9 @@
-import AuthProvider from './AuthContext'
+import AuthProvider from "./AuthContext";
 
 interface Props {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export const Providers: React.FC<Props> = ({ children }) => {
-  return <AuthProvider>{children}</AuthProvider>
-}
+  return <AuthProvider>{children}</AuthProvider>;
+};

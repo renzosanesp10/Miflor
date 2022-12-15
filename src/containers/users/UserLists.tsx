@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useContext } from "react";
 import {
   Box,
   Button,
@@ -17,167 +17,259 @@ import {
   TableHead,
   TablePagination,
   TableRow,
-  IconButton
-} from '@mui/material'
-import { FloatingWindow } from '../../components/base/FloatingWindow'
-import DeleteIcon from '@mui/icons-material/Delete'
-import EditIcon from '@mui/icons-material/Edit'
+  IconButton,
+} from "@mui/material";
+import { FloatingWindow } from "../../components/base/FloatingWindow";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+import { getWholeDocumentByName } from "../../lib/firebaseHelper";
+import { AuthContext } from "../../contexts/AuthContext";
+import { addDoc, collection, deleteDoc, doc, setDoc } from "firebase/firestore";
 
 interface Column {
-  id: 'name' | 'email' | 'role' | 'options'
-  label: string
-  minWidth?: number
-  align?: 'right' | 'center'
-  format?: (value: number) => string
+  id: "name" | "email" | "rol" | "options";
+  label: string;
+  minWidth?: number;
+  align?: "right" | "center";
+  format?: (value: number) => string;
 }
 
 interface Data {
-  name: string
-  email: string
-  role: string
-  options: React.ReactNode
+  name: string;
+  email: string;
+  rol: string;
+  options: React.ReactNode;
 }
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  rol: string;
+}
+interface Rol {
+  id: string;
+  rol: string;
+}
+const userDefault = {
+  id: "",
+  name: "",
+  email: "",
+  rol: "",
+};
 
 export const UserLists = () => {
-  const [open, setOpen] = useState(false)
-  const [isEdit, setIsEdit] = useState(false)
-  const [page, setPage] = useState(0)
-  const [rowsPerPage, setRowsPerPage] = useState(10)
-  const [age, setAge] = useState('')
+  const [users, setUsers] = useState<User[]>([]);
+  const [userToEdit, setUserToEdit] = useState<User>(userDefault);
+  const [roles, setRoles] = useState<Rol[]>([]);
+  const [password, setPassword] = useState()
+  const [rows, setRows] = useState<Data[]>([]);
+  const [open, setOpen] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const { db } = useContext(AuthContext);
 
-  function createData (name: string, email: string, role: string): Data {
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  /*const fetchProducts = async () => {
+    const allProducts= await getWholeDocumentByName(db, "productos");
+    setProducts(allProducts);
+    const rowsFormatted = allProducts.map((u) => createData(u));
+    setRows(rowsFormatted);
+  };*/
+  const fetchUsers = async () => {
+    const allUsers = await getWholeDocumentByName(db, "usuarios");
+    const allRoles = await getWholeDocumentByName(db, "roles");
+    const usersFormatted: User[] = allUsers.map((u) => {
+      const rol = allRoles.find((r) => r.id === u.rol).rol || "not found";
+      return { ...u, rol };
+    });
+    setRoles(allRoles);
+    setUsers(usersFormatted);
+    const rowsFormatted = usersFormatted.map((u) => createData(u));
+    setRows(rowsFormatted);
+  };
+  const deleteById = async (id: string) => {
+    await deleteDoc(doc(db, "usuarios", id));
+    const newUsersArray = users.filter((u) => u.id !== id);
+    setUsers(newUsersArray);
+    const rowsFormatted = newUsersArray.map((u) => createData(u));
+    setRows(rowsFormatted);
+  };
+  const getRolByNameFromAllRoles = (rol: string) =>
+    roles.find((r) => r.rol === rol)?.id ?? "";
+  const addUser = async () => {
+    const newUser = {
+      name: userToEdit.name,
+      email: userToEdit.email,
+      rol: getRolByNameFromAllRoles(userToEdit.rol),
+    };
+    const docRef = await addDoc(collection(db, "usuarios"), newUser);
+    const newUsersArray = [
+      ...users,
+      { id: docRef.id, ...newUser, rol: userToEdit.rol },
+    ];
+    setUsers(newUsersArray);
+    const rowsFormatted = newUsersArray.map((u) => createData(u));
+    setRows(rowsFormatted);
+    setOpen(false);
+  };
+  const updateUser = async () => {
+    await setDoc(doc(db, "usuarios", userToEdit.id), {
+      name: userToEdit.name,
+      email: userToEdit.email,
+      rol: getRolByNameFromAllRoles(userToEdit.rol),
+    });
+    const newUsersArray = users.map((u) =>
+      u.id !== userToEdit.id
+        ? u
+        : {
+            ...u,
+            name: userToEdit.name,
+            email: userToEdit.email,
+            rol: userToEdit.rol,
+          }
+    );
+    setUsers(newUsersArray);
+    const rowsFormatted = newUsersArray.map((u) => createData(u));
+    setRows(rowsFormatted);
+    setOpen(false);
+  };
+
+  const createData = (user: User): Data => {
     return {
-      name,
-      email,
-      role,
+      name: user.name,
+      email: user.email,
+      rol: user.rol,
       options: (
-        <Box sx={{ display: 'inline-flex', gap: '10px' }}>
+        <Box sx={{ display: "inline-flex", gap: "10px" }}>
           <IconButton
-            aria-label='edit'
-            size='large'
+            aria-label="edit"
+            size="large"
             onClick={() => {
-              setOpen(true)
-              setIsEdit(true)
+              setOpen(true);
+              setIsEdit(true);
+              setUserToEdit(user);
             }}
           >
             <EditIcon />
           </IconButton>
-          <IconButton aria-label='delete' size='large'>
+          <IconButton
+            aria-label="delete"
+            size="large"
+            onClick={() => {
+              deleteById(user.id);
+            }}
+          >
             <DeleteIcon />
           </IconButton>
         </Box>
-      )
-    }
-  }
-
-  const rows = [
-    createData('India', 'IN', 'Admin'),
-    createData('China', 'CN', 'Ventas'),
-    createData('Italy', 'IT', 'Ventas'),
-    createData('United States', 'US', 'Producción'),
-    createData('Canada', 'CA', 'Producción'),
-    createData('Australia', 'AU', 'Producción'),
-    createData('Germany', 'DE', 'Producción'),
-    createData('Ireland', 'IE', 'Producción'),
-    createData('Mexico', 'MX', 'Producción'),
-    createData('Japan', 'JP', 'Ventas'),
-    createData('France', 'FR', 'Ventas'),
-    createData('United Kingdom', 'GB', 'Ventas'),
-    createData('Russia', 'RU', 'Ventas'),
-    createData('Nigeria', 'NG', 'Ventas'),
-    createData('Brazil', 'BR', 'Producción')
-  ]
+      ),
+    };
+  };
 
   const columns: readonly Column[] = [
-    { id: 'name', label: 'Nombre' },
-    { id: 'email', label: 'Correo' },
-    { id: 'role', label: 'Rol' },
-    { id: 'options', label: 'Opciones', align: 'center' }
-  ]
+    { id: "name", label: "Nombre" },
+    { id: "email", label: "Correo" },
+    { id: "rol", label: "Rol" },
+    { id: "options", label: "Opciones", align: "center" },
+  ];
 
-  const handleChange = (event: SelectChangeEvent) => {
-    setAge(event.target.value as string)
-  }
-
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage)
-  }
+  const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
 
   const handleChangeRowsPerPage = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
-    setRowsPerPage(+event.target.value)
-    setPage(0)
-  }
+    setRowsPerPage(+event.target.value);
+    setPage(0);
+  };
 
   const handleOpenModal = () => {
-    setOpen(true)
-    setIsEdit(false)
-  }
+    setOpen(true);
+    setIsEdit(false);
+    setUserToEdit(userDefault);
+  };
+  const editField = (fieldName: string, newValue: string) =>
+    setUserToEdit({ ...userToEdit, [fieldName]: newValue });
 
   return (
     <>
       <Box
         sx={{
-          marginBottom: '10px',
-          display: 'flex',
-          justifyContent: 'flex-end'
+          marginBottom: "10px",
+          display: "flex",
+          justifyContent: "flex-end",
         }}
       >
-        <Button variant='contained' onClick={handleOpenModal}>
+        <Button variant="contained" onClick={handleOpenModal}>
           Agregar
         </Button>
         <FloatingWindow open={open} setOpen={setOpen}>
-          <Typography component='h5' variant='h5' marginBottom={2}>
-            {isEdit ? 'Editar' : 'Agregar'}
+          <Typography component="h5" variant="h5" marginBottom={2}>
+            {isEdit ? "Editar" : "Agregar"}
           </Typography>
           <TextField
-            sx={{ marginBottom: '8px' }}
-            id='name'
-            label='Nombre'
-            variant='outlined'
+            sx={{ marginBottom: "8px" }}
+            id="name"
+            label="Nombre"
+            variant="outlined"
+            onChange={({ target: { value } }) => editField("name", value)}
+            value={userToEdit.name}
             fullWidth
           />
           <TextField
-            sx={{ marginBottom: '8px' }}
-            id='email'
-            label='Correo'
-            variant='outlined'
+            sx={{ marginBottom: "8px" }}
+            id="email"
+            label="Correo"
+            variant="outlined"
+            disabled={isEdit}
+            onChange={({ target: { value } }) => editField("email", value)}
+            value={userToEdit.email}
             fullWidth
           />
           <TextField
-            sx={{ marginBottom: '8px' }}
-            id='password'
-            type='password'
-            label='Contraseña'
-            variant='outlined'
+            sx={{ marginBottom: "8px" }}
+            id="password"
+            type="password"
+            disabled={isEdit}
+            label="Contraseña"
+            value={isEdit? '.......'  : password}
+            variant="outlined"
             fullWidth
           />
-          <FormControl fullWidth sx={{ marginBottom: '20px' }}>
-            <InputLabel id='role-label'>Age</InputLabel>
+          <FormControl fullWidth sx={{ marginBottom: "20px" }}>
+            <InputLabel id="rol-label">Rol</InputLabel>
             <Select
-              labelId='role-label'
-              id='demo-simple-select'
-              value={age}
-              label='Age'
-              onChange={handleChange}
+              labelId="rol-label"
+              id="demo-simple-select"
+              value={userToEdit.rol}
+              label="Rol"
+              onChange={({ target: { value } }) => editField("rol", value)}
             >
-              <MenuItem value={10}>Ten</MenuItem>
-              <MenuItem value={20}>Twenty</MenuItem>
-              <MenuItem value={30}>Thirty</MenuItem>
+              {roles.map((r, i) => (
+                <MenuItem value={r.rol} key={i}>
+                  {r.rol}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
-          <Button variant='contained' fullWidth>
-            gregar
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => (userToEdit.id ? updateUser() : addUser())}
+          >
+            {isEdit ? "Editar" : "Agregar"}
           </Button>
         </FloatingWindow>
       </Box>
-      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      <Paper sx={{ width: "100%", overflow: "hidden" }}>
         <TableContainer sx={{ maxHeight: 440 }}>
-          <Table stickyHeader aria-label='sticky table'>
+          <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
-                {columns.map(column => (
+                {columns.map((column) => (
                   <TableCell
                     key={column.id}
                     align={column.align}
@@ -191,33 +283,33 @@ export const UserLists = () => {
             <TableBody>
               {rows
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map(row => {
+                .map((row) => {
                   return (
                     <TableRow
                       hover
-                      role='checkbox'
+                      role="checkbox"
                       tabIndex={-1}
                       key={row.email}
                     >
-                      {columns.map(column => {
-                        const value = row[column.id]
+                      {columns.map((column) => {
+                        const value = row[column.id];
                         return (
                           <TableCell key={column.id} align={column.align}>
-                            {column.format && typeof value === 'number'
+                            {column.format && typeof value === "number"
                               ? column.format(value)
                               : value}
                           </TableCell>
-                        )
+                        );
                       })}
                     </TableRow>
-                  )
+                  );
                 })}
             </TableBody>
           </Table>
         </TableContainer>
         <TablePagination
           rowsPerPageOptions={[10, 25, 100]}
-          component='div'
+          component="div"
           count={rows.length}
           rowsPerPage={rowsPerPage}
           page={page}
@@ -226,5 +318,5 @@ export const UserLists = () => {
         />
       </Paper>
     </>
-  )
-}
+  );
+};
