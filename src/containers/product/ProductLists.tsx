@@ -18,10 +18,11 @@ import {
 } from "@mui/material";
 import Button from "@mui/material/Button/Button";
 import IconButton from "@mui/material/IconButton/IconButton";
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { FloatingWindow } from "../../components/base/FloatingWindow";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { getWholeDocumentByName } from "../../lib/firebaseHelper";
 import { firebaseApp } from "../../config/firebase";
 import {
   getFirestore,
@@ -31,17 +32,21 @@ import {
   onSnapshot,
   QuerySnapshot,
   DocumentData,
+  doc,
+  setDoc,
+  addDoc,
 } from "firebase/firestore";
+import { AuthContext } from "../../contexts/AuthContext";
 
 interface Column {
   id:
-    | "name"
-    | "description"
-    | "category"
-    | "supplier"
-    | "stock"
-    | "price"
-    | "options";
+  | "name"
+  | "description"
+  | "category"
+  | "supplier"
+  | "stock"
+  | "price"
+  | "options";
   label: string;
   minWidth?: number;
   align?: "right" | "center";
@@ -58,63 +63,116 @@ interface Data {
   options: React.ReactNode;
 }
 
-interface Productos {
+interface Producto {
+  id: string;
   category: string;
   description: string;
   name: string;
-  price: number;
-  stock: number;
+  price: string;
+  stock: string;
   supplier: string;
 }
 
-interface Iprops {
-  producto: Productos;
-}
+
+const productDefault = {
+  id: "",
+  name: "",
+  description: "",
+  category: "",
+  supplier: "",
+  stock: "",
+  price: "",
+};
 
 export const ProductLists = () => {
-  //const [productos, setProductos] = useState<Productos[]>([]);
-  //const firestore = getFirestore(firebaseApp);
-  //const productsCollection = collection(firestore, 'productos');
-
-  /*/
-  useEffect(() =>
-    onSnapshot(productsCollection, (snapshot: QuerySnapshot<DocumentData>) => {
-      setProductos(
-        snapshot.docs.map((doc) => {
-          return {
-            id: doc.id,
-            ...doc.data(),
-          };
-        })
-      );
-    }),
-    []
-  );
-
-  console.log(productos, "productos")
-/*/
-
+  const [product, setProducts] = useState<Producto[]>([]);
+  const [productToEdit, setProductToEdit] = useState<Producto>(productDefault);
+  const { db } = useContext(AuthContext);
+  const [rows, setRows] = useState<Data[]>([]);
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [age, setAge] = useState("");
 
-  function createData(
-    name: string,
-    description: string,
-    category: string,
-    supplier: string,
-    stock: string,
-    price: string
-  ): Data {
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const deleteById = async (id: string) => {
+    await deleteDoc(doc(db, "productos", id));
+    const newProductArray = product.filter((p) => p.id !== id);
+    setProducts(newProductArray);
+    const rowsFormatted = newProductArray.map((p) => createData(p));
+    setRows(rowsFormatted);
+
+  }
+
+  const addProduct = async () => {
+    const newProduct = {
+      name: productToEdit.name,
+      description: productToEdit.description,
+      category: productToEdit.category,
+      supplier: productToEdit.supplier,
+      stock: productToEdit.stock,
+      price: productToEdit.price
+    }
+    console.log(1);
+    const docRef = await addDoc(collection(db, "productos"), newProduct);
+    console.log(2);
+    const newProductArray = [
+      ...product,
+      { id: docRef.id, ...newProduct },
+    ];
+    setProducts(newProductArray);
+    const rowsFormatted = newProductArray.map((p) => createData(p));
+    setRows(rowsFormatted);
+    setOpen(false);
+  };
+
+  const fetchProducts = async () => {
+    const allProducts = await getWholeDocumentByName(db, "productos");
+    setProducts(allProducts);
+    const rowsFormatted = allProducts.map((u) => createData(u));
+    setRows(rowsFormatted);
+  };
+
+  const updateProduct = async () => {
+    await setDoc(doc(db, "productos", productToEdit.id), {
+      name: productToEdit.name,
+      description: productToEdit.description,
+      category: productToEdit.category,
+      supplier: productToEdit.supplier,
+      stock: productToEdit.stock,
+      price: productToEdit.price
+    });
+    const newProductArray = product.map((p) =>
+      p.id !== productToEdit.id
+        ? p
+        : {
+          ...p,
+          name: productToEdit.name,
+          description: productToEdit.description,
+          category: productToEdit.category,
+          supplier: productToEdit.supplier,
+          stock: productToEdit.stock,
+          price: productToEdit.price
+        }
+    );
+    setProducts(newProductArray);
+    const rowsFormatted = newProductArray.map((p) => createData(p));
+    setRows(rowsFormatted);
+    setOpen(false);
+  };
+
+  const createData = (products: Producto): Data => {
     return {
-      name,
-      description,
-      category,
-      supplier,
-      stock,
-      price,
+      name: products.name,
+      description: products.description,
+      category: products.category,
+      supplier: products.supplier,
+      stock: products.stock,
+      price: products.price,
       options: (
         <Box sx={{ display: "inline-flex", gap: "10px" }}>
           <IconButton
@@ -123,101 +181,21 @@ export const ProductLists = () => {
             onClick={() => {
               setOpen(true);
               setIsEdit(true);
+              setProductToEdit(products);
             }}
           >
             <EditIcon />
           </IconButton>
-          <IconButton aria-label="delete" size="large">
+          <IconButton aria-label="delete" size="large" onClick={() => {
+            deleteById(products.id)
+          }} >
             <DeleteIcon />
-          </IconButton>
+          </IconButton> 
         </Box>
       ),
     };
-  }
+  };
 
-  const rows = [
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData(
-      "Mantequilla",
-      "Mantequilla gloria",
-      "Abarrotes",
-      "Grupo Jorama",
-      "7",
-      "3.5"
-    ),
-    createData("China", "CN", "Ventas", "", "", ""),
-  ];
 
   const columns: readonly Column[] = [
     { id: "name", label: "Nombre del Producto" },
@@ -249,6 +227,9 @@ export const ProductLists = () => {
     setIsEdit(false);
   };
 
+  const editField = (fieldName: string, newValue: string) =>
+    setProductToEdit({ ...productToEdit, [fieldName]: newValue });
+
   return (
     <>
       <Box
@@ -270,6 +251,8 @@ export const ProductLists = () => {
             id="name"
             label="Nombre del Producto"
             variant="outlined"
+            onChange={({ target: { value } }) => editField("name", value)}
+            value={productToEdit.name}
             fullWidth
           />
           <TextField
@@ -277,6 +260,8 @@ export const ProductLists = () => {
             id="description"
             label="Descripcion"
             variant="outlined"
+            onChange={({ target: { value } }) => editField("description", value)}
+            value={productToEdit.description}
             fullWidth
           />
           <TextField
@@ -284,6 +269,8 @@ export const ProductLists = () => {
             id="category"
             label="Categoria"
             variant="outlined"
+            onChange={({ target: { value } }) => editField("category", value)}
+            value={productToEdit.category}
             fullWidth
           />
           <TextField
@@ -291,6 +278,8 @@ export const ProductLists = () => {
             id="supplier"
             label="Proveedor"
             variant="outlined"
+            onChange={({ target: { value } }) => editField("supplier", value)}
+            value={productToEdit.supplier}
             fullWidth
           />
           <TextField
@@ -298,18 +287,22 @@ export const ProductLists = () => {
             id="stock"
             label="Existencias"
             variant="outlined"
+            onChange={({ target: { value } }) => editField("stock", value)}
+            value={productToEdit.stock}
             fullWidth
           />
           <TextField
             sx={{ marginBottom: "8px" }}
-            id="password"
-            type="password"
+            id="price"
+            type="text"
             label="Precio"
             variant="outlined"
+            onChange={({ target: { value } }) => editField("price", value)}
+            value={productToEdit.price}
             fullWidth
           />
-          <Button variant="contained" fullWidth>
-            Agregar
+          <Button variant="contained" fullWidth onClick={() => (productToEdit.id ? updateProduct() : addProduct())}>
+            {isEdit ? "Editar" : "Agregar"}
           </Button>
         </FloatingWindow>
       </Box>
