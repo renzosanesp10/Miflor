@@ -9,7 +9,7 @@ export default function ProductPage() {
   const { userAuth } = useContext(AuthContext);
   const route = useRouter();
 
-  useEffect(() => {
+  /*/useEffect(() => {
     if (userAuth.uid.trim() === "") {
       setIsLogged(false);
       route.push("/login");
@@ -22,7 +22,7 @@ export default function ProductPage() {
 
   if (isLogged || userAuth.uid.trim() === "") {
     return <>Unauthorized</>;
-  }
+  }/*/
 
   return (
     <DashboardLayout title="Productos">

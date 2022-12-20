@@ -73,12 +73,7 @@ export const UserLists = () => {
     fetchUsers();
   }, []);
 
-  /*const fetchProducts = async () => {
-    const allProducts= await getWholeDocumentByName(db, "productos");
-    setProducts(allProducts);
-    const rowsFormatted = allProducts.map((u) => createData(u));
-    setRows(rowsFormatted);
-  };*/
+  /**/
   const fetchUsers = async () => {
     const allUsers = await getWholeDocumentByName(db, "usuarios");
     const allRoles = await getWholeDocumentByName(db, "roles");
@@ -100,6 +95,7 @@ export const UserLists = () => {
   };
   const getRolByNameFromAllRoles = (rol: string) =>
     roles.find((r) => r.rol === rol)?.id ?? "";
+    
   const addUser = async () => {
     const newUser = {
       name: userToEdit.name,
