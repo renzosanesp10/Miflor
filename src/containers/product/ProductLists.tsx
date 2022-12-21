@@ -117,9 +117,7 @@ export const ProductLists = () => {
       stock: productToEdit.stock,
       price: productToEdit.price
     }
-    console.log(1);
     const docRef = await addDoc(collection(db, "productos"), newProduct);
-    console.log(2);
     const newProductArray = [
       ...product,
       { id: docRef.id, ...newProduct },

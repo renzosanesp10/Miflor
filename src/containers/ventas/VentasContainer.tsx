@@ -21,31 +21,66 @@ import {
 } from "@mui/material";
 import { FloatingWindow } from "../../components/base/FloatingWindow";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import AddIcon from "@mui/icons-material/Add";
 import { getWholeDocumentByName } from "../../lib/firebaseHelper";
 import { AuthContext } from "../../contexts/AuthContext";
 import { addDoc, collection, deleteDoc, doc, setDoc } from "firebase/firestore";
 
 interface Column {
-  id: "name" | "email" | "rol" | "options" | "description" | "quantity";
+  id:
+    | "name"
+    | "description"
+    | "quantity"
+    | "addToCart"
+    | "id"
+    | "date"
+    | "totalAmount"
+    | "quantityOfProducts"
+    | "options";
   label: string;
   minWidth?: number;
   align?: "right" | "center";
   format?: (value: number) => string;
 }
-
 interface ProductRow {
   name: string;
   description: string;
   quantity: number;
   addToCart?: React.ReactNode;
 }
-interface Data {
-  name: string;
-  email: string;
-  rol: string;
+type productField = "name" | "description" | "quantity" | "addToCart";
+type ventaField =
+  | "id"
+  | "date"
+  | "quantityOfProducts"
+  | "totalAmount"
+  | "options";
+interface VentaRow {
+  id: string;
+  date: string;
+  totalAmount: string;
+  quantityOfProducts: string;
   options: React.ReactNode;
+}
+interface LineaDeVentaFirebase {
+  id: string;
+  cantidad: string;
+  description: string;
+  productoID: string;
+}
+interface LineaDeVenta {
+  id: string;
+  quantity: string;
+  description: string;
+  product: Product;
+}
+interface Venta {
+  id: string;
+  date: Date;
+  totalAmount: number;
+  quantityOfProducts: number;
+  lineasDeVentas: LineaDeVenta[];
 }
 interface Product {
   id: string;
@@ -56,32 +91,27 @@ interface Product {
   stock: number;
   supplier: string;
 }
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  rol: string;
-}
-interface Rol {
-  id: string;
-  rol: string;
-}
-const userDefault = {
+const ventaDefault: Venta = {
   id: "",
-  name: "",
-  email: "",
-  rol: "",
+  date: new Date(),
+  lineasDeVentas: [],
+  totalAmount: 0,
+  quantityOfProducts: 0,
 };
 
 export default function VentasContainer() {
-  const [isOpenProductsModal, setIsOpenProductsModal] = useState(true);
+  const [isOpenProductsModal, setIsOpenProductsModal] = useState(false);
+  const [isOpenVentaModal, setIsOpenVentaModal] = useState(false);
+  const [isShowingProducts, setIsShowingProducts] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [userToEdit, setUserToEdit] = useState<User>(userDefault);
-  const [roles, setRoles] = useState<Rol[]>([]);
-  const [password, setPassword] = useState();
-  const [rows, setRows] = useState<Data[]>([]);
+  const [productsToView, setProductsToView] = useState([]);
+  const [ventas, setVentas] = useState<Venta[]>([]);
+  const [ventaToEdit, setVentaToEdit] = useState<Venta>(ventaDefault);
+  const [rows, setRows] = useState<VentaRow[]>([]);
   const [productRow, setProductRows] = useState<ProductRow[]>([]);
+  const [productToAddInVentaRow, setProductToAddInVentaRows] = useState<
+    ProductRow[]
+  >([]);
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [page, setPage] = useState(0);
@@ -89,120 +119,136 @@ export default function VentasContainer() {
   const { db } = useContext(AuthContext);
 
   useEffect(() => {
-    fetchProducts();
-    fetchUsers();
+    initPage();
   }, []);
 
-  const fetchProducts = async () => {
+  const initPage = async () => {
+    const products = await fetchProducts();
+    fetchVentas(products);
+  };
+  const fetchProducts = async (): Promise<Product[]> => {
     const allProducts = await getWholeDocumentByName(db, "productos");
     setProducts(allProducts);
     const rowsFormatted = allProducts.map((u) => createProductRow(u));
     setProductRows(rowsFormatted);
+    return allProducts;
   };
-  const fetchUsers = async () => {
-    const allUsers = await getWholeDocumentByName(db, "usuarios");
-    const allRoles = await getWholeDocumentByName(db, "roles");
-    const usersFormatted: User[] = allUsers.map((u) => {
-      const rol = allRoles.find((r) => r.id === u.rol).rol || "not found";
-      return { ...u, rol };
-    });
-    setRoles(allRoles);
-    setUsers(usersFormatted);
-    const rowsFormatted = usersFormatted.map((u) => createData(u));
+  const fetchVentas = async (allProducts: Product[]) => {
+    const allVentas = await getWholeDocumentByName(db, "ventas");
+    console.log("allVentas");
+    console.log(allVentas);
+    const ventasFormatted: Venta[] = allVentas.map((v) => ({
+      id: v.id,
+      date: new Date(v.fecha.seconds),
+      totalAmount: v.costoTotal,
+      quantityOfProducts: v.lineasDeVenta.length,
+      lineasDeVentas: v.lineasDeVenta.map((l: LineaDeVentaFirebase) => ({
+        id: l.id,
+        quantity: l.cantidad,
+        description: l.description,
+        product: allProducts.find((p) => p.id === l.productoID),
+      })),
+    }));
+    setVentas(ventasFormatted);
+    const rowsFormatted = ventasFormatted.map((v) => createVentaRow(v));
     setRows(rowsFormatted);
   };
   const deleteById = async (id: string) => {
-    await deleteDoc(doc(db, "usuarios", id));
-    const newUsersArray = users.filter((u) => u.id !== id);
-    setUsers(newUsersArray);
-    const rowsFormatted = newUsersArray.map((u) => createData(u));
+    await deleteDoc(doc(db, "ventas", id));
+    const newVentasArray = ventas.filter((v) => v.id !== id);
+    setVentas(newVentasArray);
+    const rowsFormatted = newVentasArray.map((u) => createVentaRow(u));
     setRows(rowsFormatted);
   };
-  const getRolByNameFromAllRoles = (rol: string) =>
-    roles.find((r) => r.rol === rol)?.id ?? "";
-  const addUser = async () => {
-    const newUser = {
-      name: userToEdit.name,
-      email: userToEdit.email,
-      rol: getRolByNameFromAllRoles(userToEdit.rol),
+  const addVenta = async () => {
+    const newVenta = {
+      date: new Date(),
+      totalAmount: 0,
+      quantityOfProducts: 0,
+      lineasDeVentas: [],
     };
-    const docRef = await addDoc(collection(db, "usuarios"), newUser);
-    const newUsersArray = [
-      ...users,
-      { id: docRef.id, ...newUser, rol: userToEdit.rol },
-    ];
-    setUsers(newUsersArray);
-    const rowsFormatted = newUsersArray.map((u) => createData(u));
+    const docRef = await addDoc(collection(db, "venta"), newVenta);
+    const newVentasArray = [...ventas, { id: docRef.id, ...newVenta }];
+    setVentas(newVentasArray);
+    const rowsFormatted = newVentasArray.map((u) => createVentaRow(u));
     setRows(rowsFormatted);
     setOpen(false);
   };
   const updateUser = async () => {
-    await setDoc(doc(db, "usuarios", userToEdit.id), {
-      name: userToEdit.name,
-      email: userToEdit.email,
-      rol: getRolByNameFromAllRoles(userToEdit.rol),
+    await setDoc(doc(db, "usuarios", ventaToEdit.id), {
+      id: ventaToEdit.id,
+      date: ventaToEdit.date,
+      totalAmount: 0,
+      quantityOfProducts: 0,
+      lineasDeVentas: [],
     });
-    const newUsersArray = users.map((u) =>
-      u.id !== userToEdit.id
-        ? u
+    const newVentasArray = ventas.map((v) =>
+      v.id !== ventaToEdit.id
+        ? v
         : {
-            ...u,
-            name: userToEdit.name,
-            email: userToEdit.email,
-            rol: userToEdit.rol,
+            ...v,
+            date: ventaToEdit.date,
+            totalAmount: 0,
+            quantityOfProducts: 0,
+            lineasDeVentas: [],
           }
     );
-    setUsers(newUsersArray);
-    const rowsFormatted = newUsersArray.map((u) => createData(u));
+    setVentas(newVentasArray);
+    const rowsFormatted = newVentasArray.map((u) => createVentaRow(u));
     setRows(rowsFormatted);
     setOpen(false);
   };
-
   const addProductToVenta = (product: Product) => {
     console.log(product);
   };
-
-  const createProductRow = (product: Product): ProductRow => {
+  const createProductRow = (product: Product, needAdd: boolean): ProductRow => {
     return {
       name: product.name,
       description: product.description,
       quantity: product.stock,
-      addToCart: (
+      addToCart: needAdd ? (
         <Box sx={{ display: "inline-flex", gap: "10px" }}>
           <IconButton
-            aria-label="edit"
+            aria-label="add"
             size="large"
             onClick={() => addProductToVenta(product)}
           >
             <AddIcon />
           </IconButton>
         </Box>
-      ),
+      ) : null,
     };
   };
-  const createData = (user: User): Data => {
+  const createVentaRow = (venta: Venta): VentaRow => {
     return {
-      name: user.name,
-      email: user.email,
-      rol: user.rol,
+      id: venta.id,
+      totalAmount: String(venta.totalAmount),
+      date: venta.date.toLocaleString(),
+      quantityOfProducts: String(venta.quantityOfProducts),
       options: (
         <Box sx={{ display: "inline-flex", gap: "10px" }}>
           <IconButton
-            aria-label="edit"
+            aria-label="see"
             size="large"
             onClick={() => {
-              setOpen(true);
               setIsEdit(true);
-              setUserToEdit(user);
+              const prods = venta.lineasDeVentas.map((l) => l.product);
+              console.log("prods");
+              console.log(prods);
+              const rowsFormatted = prods.map((u) =>
+                createProductRow(u, false)
+              );
+              setProductRows(rowsFormatted);
+              setIsOpenProductsModal(true);
             }}
           >
-            <EditIcon />
+            <VisibilityIcon />
           </IconButton>
           <IconButton
             aria-label="delete"
             size="large"
             onClick={() => {
-              deleteById(user.id);
+              deleteById(venta.id);
             }}
           >
             <DeleteIcon />
@@ -216,12 +262,14 @@ export default function VentasContainer() {
     { id: "name", label: "Nombre" },
     { id: "description", label: "Descripción" },
     { id: "quantity", label: "Cantidad" },
+    { id: "addToCart", label: "Añadir", align: "center" },
   ];
 
-  const columns: readonly Column[] = [
-    { id: "name", label: "Nombre" },
-    { id: "email", label: "Correo" },
-    { id: "rol", label: "Rol" },
+  const columnsVentas: readonly Column[] = [
+    { id: "id", label: "ID" },
+    { id: "date", label: "Fecha" },
+    { id: "totalAmount", label: "Total" },
+    { id: "quantityOfProducts", label: "# Productos" },
     { id: "options", label: "Opciones", align: "center" },
   ];
 
@@ -237,10 +285,10 @@ export default function VentasContainer() {
   const handleOpenModal = () => {
     setOpen(true);
     setIsEdit(false);
-    setUserToEdit(userDefault);
+    setVentaToEdit(ventaDefault);
   };
   const editField = (fieldName: string, newValue: string) =>
-    setUserToEdit({ ...userToEdit, [fieldName]: newValue });
+    setVentaToEdit({ ...ventaToEdit, [fieldName]: newValue });
 
   return (
     <>
@@ -259,21 +307,23 @@ export default function VentasContainer() {
           setOpen={setIsOpenProductsModal}
         >
           <Typography component="h5" variant="h5" marginBottom={2}>
-            {isEdit ? "Editar" : "Agregar"}
+            {isShowingProducts ? "Mostrar" : "Agregar"}
           </Typography>
           <TableContainer sx={{ maxHeight: 440 }}>
             <Table stickyHeader aria-label="sticky table">
               <TableHead>
                 <TableRow>
-                  {columnsProducts.map((column) => (
-                    <TableCell
-                      key={column.id}
-                      align={column.align}
-                      style={{ minWidth: column.minWidth }}
-                    >
-                      {column.label}
-                    </TableCell>
-                  ))}
+                  {columnsProducts
+                    .filter((c) => !(isShowingProducts && c.label === "Añadir"))
+                    .map((column) => (
+                      <TableCell
+                        key={column.id}
+                        align={column.align}
+                        style={{ minWidth: column.minWidth }}
+                      >
+                        {column.label}
+                      </TableCell>
+                    ))}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -286,13 +336,15 @@ export default function VentasContainer() {
                       key={row.name}
                     >
                       {columnsProducts.map((column) => {
-                        const value = columnsProducts[column.id];
+                        const value = row[column.id as productField];
                         return (
-                          <TableCell key={column.id} align={column.align}>
-                            {column.format && typeof value === "number"
-                              ? column.format(value)
-                              : value}
-                          </TableCell>
+                          value !== null && (
+                            <TableCell key={column.id} align={column.align}>
+                              {column.format && typeof value === "number"
+                                ? column.format(value)
+                                : value}
+                            </TableCell>
+                          )
                         );
                       })}
                     </TableRow>
@@ -312,27 +364,7 @@ export default function VentasContainer() {
             label="Nombre"
             variant="outlined"
             onChange={({ target: { value } }) => editField("name", value)}
-            value={userToEdit.name}
-            fullWidth
-          />
-          <TextField
-            sx={{ marginBottom: "8px" }}
-            id="email"
-            label="Correo"
-            variant="outlined"
-            disabled={isEdit}
-            onChange={({ target: { value } }) => editField("email", value)}
-            value={userToEdit.email}
-            fullWidth
-          />
-          <TextField
-            sx={{ marginBottom: "8px" }}
-            id="password"
-            type="password"
-            disabled={isEdit}
-            label="Contraseña"
-            value={isEdit ? "......." : password}
-            variant="outlined"
+            value={ventaToEdit.date}
             fullWidth
           />
           <FormControl fullWidth sx={{ marginBottom: "20px" }}>
@@ -340,21 +372,17 @@ export default function VentasContainer() {
             <Select
               labelId="rol-label"
               id="demo-simple-select"
-              value={userToEdit.rol}
+              value={ventaToEdit.id}
               label="Rol"
               onChange={({ target: { value } }) => editField("rol", value)}
             >
-              {roles.map((r, i) => (
-                <MenuItem value={r.rol} key={i}>
-                  {r.rol}
-                </MenuItem>
-              ))}
+              <MenuItem value="item">item</MenuItem>
             </Select>
           </FormControl>
           <Button
             variant="contained"
             fullWidth
-            onClick={() => (userToEdit.id ? updateUser() : addUser())}
+            onClick={() => (ventaToEdit.id ? updateUser() : addVenta())}
           >
             {isEdit ? "Editar" : "Agregar"}
           </Button>
@@ -365,7 +393,7 @@ export default function VentasContainer() {
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
-                {columns.map((column) => (
+                {columnsVentas.map((column) => (
                   <TableCell
                     key={column.id}
                     align={column.align}
@@ -381,14 +409,9 @@ export default function VentasContainer() {
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                 .map((row) => {
                   return (
-                    <TableRow
-                      hover
-                      role="checkbox"
-                      tabIndex={-1}
-                      key={row.email}
-                    >
-                      {columns.map((column) => {
-                        const value = row[column.id];
+                    <TableRow hover role="checkbox" tabIndex={-1} key={row.id}>
+                      {columnsVentas.map((column) => {
+                        const value = row[column.id as ventaField];
                         return (
                           <TableCell key={column.id} align={column.align}>
                             {column.format && typeof value === "number"
