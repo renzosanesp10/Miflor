@@ -129,7 +129,7 @@ export default function VentasContainer() {
   const fetchProducts = async (): Promise<Product[]> => {
     const allProducts = await getWholeDocumentByName(db, "productos");
     setProducts(allProducts);
-    const rowsFormatted = allProducts.map((u) => createProductRow(u));
+    const rowsFormatted = allProducts.map((u) => createProductRow(u, false));
     setProductRows(rowsFormatted);
     return allProducts;
   };
@@ -354,7 +354,7 @@ export default function VentasContainer() {
             </Table>
           </TableContainer>
         </FloatingWindow>
-        <FloatingWindow open={open} setOpen={setOpen}>
+        <FloatingWindow open={isOpenVentaModal} setOpen={setIsOpenVentaModal}>
           <Typography component="h5" variant="h5" marginBottom={2}>
             {isEdit ? "Editar" : "Agregar"}
           </Typography>

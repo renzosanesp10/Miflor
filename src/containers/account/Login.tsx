@@ -10,26 +10,33 @@ import {
 import { Copyright } from "../../components/base/Copyright";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 import { firebaseApp } from "../../config/firebase";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useRouter } from "next/router";
 import { useContext, useEffect } from "react";
+import { getOneItemFromDocumentByID } from "../../lib/firebaseHelper";
 
 export const Login = () => {
   const auth = getAuth(firebaseApp);
+  const db = getFirestore(firebaseApp);
   const route = useRouter();
   const { userAuth } = useContext(AuthContext);
 
   useEffect(() => {
+    if (route.query.logout) return;
     goToRolRoute();
   }, [userAuth, userAuth.rol]);
 
-  const goToRolRoute = () => {
-    if (userAuth.rol === "Admin") {
+  const goToRolRoute = (rol?: string) => {
+    const rolToVerify = rol ?? userAuth.rol;
+    console.log("rolToVerify");
+    console.log(rolToVerify);
+    if (rolToVerify === "Admin") {
       route.push("/");
-    } else if (userAuth.rol === "Seller") {
-      route.push("/register");
-    } else if (userAuth.rol === "Production") {
+    } else if (rolToVerify === "Seller") {
+      route.push("/ventas");
+    } else if (rolToVerify === "Production") {
       route.push("/productos");
     }
   };
@@ -41,12 +48,18 @@ export const Login = () => {
     const password = data.get("password") || "";
 
     signInWithEmailAndPassword(auth, email.toString(), password.toString())
-      .then((userCredential) => {
+      .then(async (userCredential: { user: any }) => {
         // Signed in
         const user = userCredential.user;
         console.log(user);
         if (user) {
-          goToRolRoute();
+          console.log("user");
+          console.log(user);
+          const { rol: rolID }: { rol: string } =
+            await getOneItemFromDocumentByID(db, "usuarios", user.uid);
+          const { rol: nameOfRol }: { rol: string } =
+            await getOneItemFromDocumentByID(db, "roles", rolID);
+          goToRolRoute(nameOfRol);
         }
       })
       .catch((error) => {
