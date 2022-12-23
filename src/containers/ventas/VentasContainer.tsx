@@ -187,6 +187,13 @@ export default function VentasContainer() {
         productoID: l.product.id,
       })),
     };
+    ventaToEdit.lineasDeVentas.forEach(async (l) => {
+      const s = l.product.stock - Number(l.quantity);
+      await setDoc(doc(db, "productos", l.product.id), {
+        ...l.product,
+        stock: s < 0 ? 0 : s,
+      });
+    });
     const docRef = await addDoc(collection(db, "ventas"), newVenta);
     const newVentasArray = [
       ...ventas,
@@ -232,11 +239,7 @@ export default function VentasContainer() {
       quantity: product.stock,
       addToCart: needAdd ? (
         <Box sx={{ display: "inline-flex", gap: "10px" }}>
-          <IconButton
-            aria-label="add"
-            size="large"
-            onClick={() => {}}
-          >
+          <IconButton aria-label="add" size="large" onClick={() => {}}>
             <AddIcon />
           </IconButton>
         </Box>

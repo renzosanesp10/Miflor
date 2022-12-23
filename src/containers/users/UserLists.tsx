@@ -19,6 +19,8 @@ import {
   TableRow,
   IconButton,
 } from "@mui/material";
+import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { firebaseApp } from "../../config/firebase";
 import { FloatingWindow } from "../../components/base/FloatingWindow";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -61,13 +63,14 @@ export const UserLists = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [userToEdit, setUserToEdit] = useState<User>(userDefault);
   const [roles, setRoles] = useState<Rol[]>([]);
-  const [password, setPassword] = useState()
+  const [password, setPassword] = useState<string>("");
   const [rows, setRows] = useState<Data[]>([]);
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const { db } = useContext(AuthContext);
+  const auth = getAuth(firebaseApp);
 
   useEffect(() => {
     fetchUsers();
@@ -87,15 +90,15 @@ export const UserLists = () => {
     setRows(rowsFormatted);
   };
   const deleteById = async (id: string) => {
-    await deleteDoc(doc(db, "usuarios", id));
     const newUsersArray = users.filter((u) => u.id !== id);
+    await deleteDoc(doc(db, "usuarios", id));
     setUsers(newUsersArray);
     const rowsFormatted = newUsersArray.map((u) => createData(u));
     setRows(rowsFormatted);
   };
   const getRolByNameFromAllRoles = (rol: string) =>
     roles.find((r) => r.rol === rol)?.id ?? "";
-    
+
   const addUser = async () => {
     const newUser = {
       name: userToEdit.name,
@@ -103,6 +106,7 @@ export const UserLists = () => {
       rol: getRolByNameFromAllRoles(userToEdit.rol),
     };
     const docRef = await addDoc(collection(db, "usuarios"), newUser);
+    createUserWithEmailAndPassword(auth, userToEdit.email, password);
     const newUsersArray = [
       ...users,
       { id: docRef.id, ...newUser, rol: userToEdit.rol },
@@ -111,6 +115,7 @@ export const UserLists = () => {
     const rowsFormatted = newUsersArray.map((u) => createData(u));
     setRows(rowsFormatted);
     setOpen(false);
+    setPassword("");
   };
   const updateUser = async () => {
     await setDoc(doc(db, "usuarios", userToEdit.id), {
@@ -132,6 +137,7 @@ export const UserLists = () => {
     const rowsFormatted = newUsersArray.map((u) => createData(u));
     setRows(rowsFormatted);
     setOpen(false);
+    setPassword("");
   };
 
   const createData = (user: User): Data => {
@@ -231,7 +237,8 @@ export const UserLists = () => {
             type="password"
             disabled={isEdit}
             label="Contraseña"
-            value={isEdit? '.......'  : password}
+            onChange={({ target: { value } }) => setPassword(value)}
+            value={isEdit ? "......." : password}
             variant="outlined"
             fullWidth
           />
