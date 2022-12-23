@@ -30,8 +30,6 @@ export const Login = () => {
 
   const goToRolRoute = (rol?: string) => {
     const rolToVerify = rol ?? userAuth.rol;
-    console.log("rolToVerify");
-    console.log(rolToVerify);
     if (rolToVerify === "Admin") {
       route.push("/");
     } else if (rolToVerify === "Seller") {
@@ -51,10 +49,7 @@ export const Login = () => {
       .then(async (userCredential: { user: any }) => {
         // Signed in
         const user = userCredential.user;
-        console.log(user);
         if (user) {
-          console.log("user");
-          console.log(user);
           const { rol: rolID }: { rol: string } =
             await getOneItemFromDocumentByID(db, "usuarios", user.uid);
           const { rol: nameOfRol }: { rol: string } =

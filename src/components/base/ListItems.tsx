@@ -19,13 +19,15 @@ const MainListItems = ({ rol }: { rol: string }) => (
         </ListItemButton>
       </Link>
     )}
-    {rol === "Admin" && (
-      <ListItemButton>
-        <ListItemIcon>
-          <AssignmentIcon />
-        </ListItemIcon>
-        <ListItemText primary="Roles" />
-      </ListItemButton>
+    {rol === "-" && (
+      <Link href="/" style={{ textDecoration: "none", color: "#666F88" }}>
+        <ListItemButton>
+          <ListItemIcon>
+            <AssignmentIcon />
+          </ListItemIcon>
+          <ListItemText primary="Roles" />
+        </ListItemButton>
+      </Link>
     )}
     {["Production", "Admin"].includes(rol) && (
       <Link

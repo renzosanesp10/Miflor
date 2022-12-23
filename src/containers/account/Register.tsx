@@ -53,7 +53,6 @@ export const Register = () => {
                 return usuarioFirebase
             });
 
-            console.log(infoUsuario.user.uid);
             const docuRef = doc(firestore, `usuarios/${infoUsuario.user.uid}`);
             setDoc(docuRef, {name: name, email: email, rol: rol});    
     }
@@ -65,7 +64,6 @@ export const Register = () => {
         const rol = e.target.elements.rol.value;
         const password = e.target.elements.password.value;
 
-        console.log("submit", name , email, rol, password);
         registrarUsuario(email , password , name , rol);
     }
 

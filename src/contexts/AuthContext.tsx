@@ -64,13 +64,10 @@ const AuthProvider: React.FC<Props> = ({ children }) => {
         // https://firebase.google.com/docs/reference/js/firebase.User
         const uid = user.uid;
         let rol = "";
-        /* console.log(user) */
         const data = (await getUserInfo(uid)) as AuthInfo;
-        /* console.log('DATA', data) */
         const userRole = await getUserRole(data.rol);
         if (userRole) {
           rol = userRole.rol;
-          /* console.log('ROL', userRole.rol) */
         }
         if (data) {
           setUserAuth({ ...data, uid, rol });
@@ -82,7 +79,6 @@ const AuthProvider: React.FC<Props> = ({ children }) => {
     });
   }, []);
 
-  console.log("UserAuth", userAuth);
 
   return (
     <AuthContext.Provider value={{ userAuth, db }}>{children}</AuthContext.Provider>

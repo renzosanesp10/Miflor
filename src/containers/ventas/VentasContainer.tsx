@@ -30,12 +30,14 @@ import { addDoc, collection, deleteDoc, doc, setDoc } from "firebase/firestore";
 interface Column {
   id:
     | "name"
+    | "eliminar"
+    | "dni"
     | "description"
     | "quantity"
+    | "totalAmount"
     | "addToCart"
     | "id"
     | "date"
-    | "totalAmount"
     | "quantityOfProducts"
     | "options";
   label: string;
@@ -49,6 +51,13 @@ interface ProductRow {
   quantity: number;
   addToCart?: React.ReactNode;
 }
+interface ProductVentaRow {
+  name: React.ReactNode;
+  quantity: React.ReactNode;
+  eliminar: React.ReactNode;
+}
+type LineaDeVentaField = "id" | "quantity" | "description" | "product";
+type prodVentaField = "name" | "quantity" | "eliminar";
 type productField = "name" | "description" | "quantity" | "addToCart";
 type ventaField =
   | "id"
@@ -58,6 +67,7 @@ type ventaField =
   | "options";
 interface VentaRow {
   id: string;
+  dni: string;
   date: string;
   totalAmount: string;
   quantityOfProducts: string;
@@ -77,7 +87,8 @@ interface LineaDeVenta {
 }
 interface Venta {
   id: string;
-  date: Date;
+  dni: string;
+  date: string;
   totalAmount: number;
   quantityOfProducts: number;
   lineasDeVentas: LineaDeVenta[];
@@ -93,7 +104,8 @@ interface Product {
 }
 const ventaDefault: Venta = {
   id: "",
-  date: new Date(),
+  dni: "",
+  date: new Date().toLocaleDateString(),
   lineasDeVentas: [],
   totalAmount: 0,
   quantityOfProducts: 0,
@@ -104,11 +116,14 @@ export default function VentasContainer() {
   const [isOpenVentaModal, setIsOpenVentaModal] = useState(false);
   const [isShowingProducts, setIsShowingProducts] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
-  const [productsToView, setProductsToView] = useState([]);
+  const [productsToSelect, setProductsToSelect] = useState<Product[]>([]);
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [ventaToEdit, setVentaToEdit] = useState<Venta>(ventaDefault);
   const [rows, setRows] = useState<VentaRow[]>([]);
   const [productRow, setProductRows] = useState<ProductRow[]>([]);
+  const [productSelectedRow, setProductSelectedRow] = useState<
+    ProductVentaRow[]
+  >([]);
   const [productToAddInVentaRow, setProductToAddInVentaRows] = useState<
     ProductRow[]
   >([]);
@@ -129,17 +144,17 @@ export default function VentasContainer() {
   const fetchProducts = async (): Promise<Product[]> => {
     const allProducts = await getWholeDocumentByName(db, "productos");
     setProducts(allProducts);
+    setProductsToSelect(allProducts);
     const rowsFormatted = allProducts.map((u) => createProductRow(u, false));
     setProductRows(rowsFormatted);
     return allProducts;
   };
   const fetchVentas = async (allProducts: Product[]) => {
     const allVentas = await getWholeDocumentByName(db, "ventas");
-    console.log("allVentas");
-    console.log(allVentas);
     const ventasFormatted: Venta[] = allVentas.map((v) => ({
       id: v.id,
-      date: new Date(v.fecha.seconds),
+      dni: v.dni,
+      date: v.fecha,
       totalAmount: v.costoTotal,
       quantityOfProducts: v.lineasDeVenta.length,
       lineasDeVentas: v.lineasDeVenta.map((l: LineaDeVentaFirebase) => ({
@@ -162,17 +177,29 @@ export default function VentasContainer() {
   };
   const addVenta = async () => {
     const newVenta = {
-      date: new Date(),
-      totalAmount: 0,
-      quantityOfProducts: 0,
-      lineasDeVentas: [],
+      dni: ventaToEdit.dni,
+      fecha: new Date().toLocaleDateString(),
+      costoTotal: ventaToEdit.totalAmount,
+      lineasDeVenta: ventaToEdit.lineasDeVentas.map((l) => ({
+        cantidad: l.quantity,
+        id: l.id,
+        description: l.description,
+        productoID: l.product.id,
+      })),
     };
-    const docRef = await addDoc(collection(db, "venta"), newVenta);
-    const newVentasArray = [...ventas, { id: docRef.id, ...newVenta }];
+    const docRef = await addDoc(collection(db, "ventas"), newVenta);
+    const newVentasArray = [
+      ...ventas,
+      {
+        ...ventaToEdit,
+        quantityOfProducts: ventaToEdit.lineasDeVentas.length,
+        id: docRef.id,
+      },
+    ];
     setVentas(newVentasArray);
     const rowsFormatted = newVentasArray.map((u) => createVentaRow(u));
     setRows(rowsFormatted);
-    setOpen(false);
+    setIsOpenVentaModal(false);
   };
   const updateUser = async () => {
     await setDoc(doc(db, "usuarios", ventaToEdit.id), {
@@ -198,9 +225,6 @@ export default function VentasContainer() {
     setRows(rowsFormatted);
     setOpen(false);
   };
-  const addProductToVenta = (product: Product) => {
-    console.log(product);
-  };
   const createProductRow = (product: Product, needAdd: boolean): ProductRow => {
     return {
       name: product.name,
@@ -211,7 +235,7 @@ export default function VentasContainer() {
           <IconButton
             aria-label="add"
             size="large"
-            onClick={() => addProductToVenta(product)}
+            onClick={() => {}}
           >
             <AddIcon />
           </IconButton>
@@ -219,11 +243,73 @@ export default function VentasContainer() {
       ) : null,
     };
   };
+  const createVentaProductRow = (lv: LineaDeVenta): ProductVentaRow => {
+    return {
+      name: (
+        <FormControl fullWidth sx={{ marginBottom: "8px" }}>
+          <Select
+            labelId="rol-label"
+            id={lv.id}
+            value={lv.product.id}
+            onChange={({ target: { value } }) =>
+              editFieldProductVenta("product", value, lv.id)
+            }
+          >
+            {products.map((p, idx) => (
+              <MenuItem key={idx} value={p.id}>
+                {p.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      ),
+      quantity: (
+        <TextField
+          sx={{ marginBottom: "8px" }}
+          id="name"
+          type="number"
+          variant="outlined"
+          value={lv.quantity}
+          onChange={({ target: { value } }) =>
+            editFieldProductVenta("quantity", value, lv.id)
+          }
+        />
+      ),
+      eliminar: (
+        <Box sx={{ display: "inline-flex", gap: "10px" }}>
+          <IconButton
+            aria-label="add"
+            size="large"
+            onClick={() => deleteLineaDeVentaDeVenta(lv.id)}
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ),
+    };
+  };
+  const deleteLineaDeVentaDeVenta = (lineaDeVentaID: string) => {
+    setVentaToEdit((v) => {
+      const lineasDeVentaUpdated = v.lineasDeVentas.filter(
+        (l) => String(l.id) !== String(lineaDeVentaID)
+      );
+      const totalAmount = lineasDeVentaUpdated.reduce(
+        (amount, value) =>
+          Number(value.product.price) * Number(value.quantity) + amount,
+        0
+      );
+      setProductSelectedRow(
+        lineasDeVentaUpdated.map((l) => createVentaProductRow(l))
+      );
+      return { ...v, lineasDeVentas: lineasDeVentaUpdated, totalAmount };
+    });
+  };
   const createVentaRow = (venta: Venta): VentaRow => {
     return {
       id: venta.id,
-      totalAmount: String(venta.totalAmount),
-      date: venta.date.toLocaleString(),
+      dni: venta.dni,
+      totalAmount: "S/. " + String(venta.totalAmount),
+      date: venta.date,
       quantityOfProducts: String(venta.quantityOfProducts),
       options: (
         <Box sx={{ display: "inline-flex", gap: "10px" }}>
@@ -232,14 +318,18 @@ export default function VentasContainer() {
             size="large"
             onClick={() => {
               setIsEdit(true);
-              const prods = venta.lineasDeVentas.map((l) => l.product);
-              console.log("prods");
-              console.log(prods);
-              const rowsFormatted = prods.map((u) =>
+              const productsOnly = venta.lineasDeVentas.map((lvc) => ({
+                ...lvc.product,
+                name: lvc.product.name,
+                description: lvc.product.description,
+                stock: Number(lvc.quantity),
+              }));
+              const rowsFormatted = productsOnly.map((u) =>
                 createProductRow(u, false)
               );
               setProductRows(rowsFormatted);
               setIsOpenProductsModal(true);
+              setIsShowingProducts(true);
             }}
           >
             <VisibilityIcon />
@@ -264,9 +354,14 @@ export default function VentasContainer() {
     { id: "quantity", label: "Cantidad" },
     { id: "addToCart", label: "Añadir", align: "center" },
   ];
-
+  const columnsProductsVenta: readonly Column[] = [
+    { id: "name", label: "Nombre" },
+    { id: "quantity", label: "Cantidad" },
+    { id: "eliminar", label: "Eliminar" },
+  ];
   const columnsVentas: readonly Column[] = [
     { id: "id", label: "ID" },
+    { id: "dni", label: "DNI Cliente" },
     { id: "date", label: "Fecha" },
     { id: "totalAmount", label: "Total" },
     { id: "quantityOfProducts", label: "# Productos" },
@@ -281,11 +376,69 @@ export default function VentasContainer() {
     setRowsPerPage(+event.target.value);
     setPage(0);
   };
+  const getRandomID = () =>
+    String(new Date().getTime()) + String(Math.floor(Math.random() * 1000));
+  const addLineVentaToTable = () => {
+    const lineDeVentaToAdd = {
+      product: products[0],
+      description: "",
+      id: getRandomID(),
+      quantity: "1",
+    };
+    const lineasDeVentaUpdated = [
+      ...ventaToEdit.lineasDeVentas,
+      lineDeVentaToAdd,
+    ];
+    const totalAmount = lineasDeVentaUpdated.reduce(
+      (amount, value) =>
+        Number(value.product.price) * Number(value.quantity) + amount,
+      0
+    );
+    setVentaToEdit({
+      ...ventaToEdit,
+      lineasDeVentas: lineasDeVentaUpdated,
+      totalAmount,
+    });
+    setProductSelectedRow(
+      lineasDeVentaUpdated.map((l) => createVentaProductRow(l))
+    );
+  };
 
   const handleOpenModal = () => {
-    setOpen(true);
+    setIsOpenVentaModal(true);
     setIsEdit(false);
     setVentaToEdit(ventaDefault);
+    setIsShowingProducts(true);
+  };
+  const editFieldProductVenta = (
+    fieldName: LineaDeVentaField,
+    newValue: string,
+    lineaDeVentaID: string
+  ) => {
+    setVentaToEdit((v) => {
+      let totalAmount = 0;
+      const lineasDeVentasUpdated = v.lineasDeVentas.map((l) => {
+        let newLine;
+        if (lineaDeVentaID !== l.id) {
+          totalAmount += l.product.price * Number(l.quantity);
+          return l;
+        }
+        if (fieldName === "product") {
+          newLine = {
+            ...l,
+            [fieldName]: products.find((p) => p.id === newValue) as Product,
+          };
+        } else {
+          newLine = { ...l, [fieldName]: newValue };
+        }
+        totalAmount += newLine.product.price * Number(newLine.quantity);
+        return newLine;
+      });
+      setProductSelectedRow(
+        lineasDeVentasUpdated.map((l) => createVentaProductRow(l))
+      );
+      return { ...v, lineasDeVentas: lineasDeVentasUpdated, totalAmount };
+    });
   };
   const editField = (fieldName: string, newValue: string) =>
     setVentaToEdit({ ...ventaToEdit, [fieldName]: newValue });
@@ -358,33 +511,92 @@ export default function VentasContainer() {
           <Typography component="h5" variant="h5" marginBottom={2}>
             {isEdit ? "Editar" : "Agregar"}
           </Typography>
-          <TextField
-            sx={{ marginBottom: "8px" }}
-            id="name"
-            label="Nombre"
-            variant="outlined"
-            onChange={({ target: { value } }) => editField("name", value)}
-            value={ventaToEdit.date}
-            fullWidth
-          />
-          <FormControl fullWidth sx={{ marginBottom: "20px" }}>
-            <InputLabel id="rol-label">Rol</InputLabel>
-            <Select
-              labelId="rol-label"
-              id="demo-simple-select"
-              value={ventaToEdit.id}
-              label="Rol"
-              onChange={({ target: { value } }) => editField("rol", value)}
-            >
-              <MenuItem value="item">item</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={() => (ventaToEdit.id ? updateUser() : addVenta())}
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <TextField
+              sx={{ marginBottom: "8px", width: "48%" }}
+              id="date"
+              label="Fecha"
+              variant="outlined"
+              disabled
+              value={new Date().toLocaleDateString()}
+            />
+            <TextField
+              sx={{ marginBottom: "8px", width: "48%" }}
+              id="dni"
+              label="DNI Cliente"
+              variant="outlined"
+              onChange={({ target: { value } }) => editField("dni", value)}
+              value={ventaToEdit.dni}
+            />
+          </div>
+          <TableContainer sx={{ maxHeight: 440 }}>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                <TableRow>
+                  {columnsProductsVenta.map((column) => (
+                    <TableCell
+                      key={column.id}
+                      align={column.align}
+                      style={{ minWidth: column.minWidth }}
+                    >
+                      {column.label}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {productSelectedRow.map((row, idx) => {
+                  return (
+                    <TableRow hover role="checkbox" tabIndex={-1} key={idx}>
+                      {columnsProductsVenta.map((column) => {
+                        const value = row[column.id as prodVentaField];
+                        return (
+                          value !== null && (
+                            <TableCell key={column.id} align={column.align}>
+                              {column.format && typeof value === "number"
+                                ? column.format(value)
+                                : value}
+                            </TableCell>
+                          )
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <div
+            style={{
+              marginTop: "6px",
+              marginBottom: "20px",
+              display: "flex",
+              justifyContent: "justify-between",
+            }}
           >
-            {isEdit ? "Editar" : "Agregar"}
+            <TextField
+              sx={{ width: "48%" }}
+              id="totalAmount"
+              label="Precio Total"
+              variant="outlined"
+              value={ventaToEdit.totalAmount}
+              disabled
+            />
+            <Button
+              sx={{
+                margin: 1,
+                width: "48%",
+              }}
+              size="small"
+              variant="contained"
+              fullWidth
+              onClick={addLineVentaToTable}
+            >
+              <AddIcon /> Product
+            </Button>
+          </div>
+          <Button variant="contained" fullWidth onClick={addVenta}>
+            Guardar
           </Button>
         </FloatingWindow>
       </Box>
