@@ -29,6 +29,19 @@ const MainListItems = ({ rol }: { rol: string }) => (
         </ListItemButton>
       </Link>
     )}
+    {["Admin"].includes(rol) && (
+      <Link
+        href="/suppliers"
+        style={{ textDecoration: "none", color: "#666F88" }}
+      >
+        <ListItemButton>
+          <ListItemIcon>
+            <ShoppingCartIcon />
+          </ListItemIcon>
+          <ListItemText primary="Proveedores" />
+        </ListItemButton>
+      </Link>
+    )}
     {["Production", "Admin"].includes(rol) && (
       <Link
         href="/productos"

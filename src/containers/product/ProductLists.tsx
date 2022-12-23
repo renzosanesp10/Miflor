@@ -40,13 +40,13 @@ import { AuthContext } from "../../contexts/AuthContext";
 
 interface Column {
   id:
-  | "name"
-  | "description"
-  | "category"
-  | "supplier"
-  | "stock"
-  | "price"
-  | "options";
+    | "name"
+    | "description"
+    | "category"
+    | "supplier"
+    | "stock"
+    | "price"
+    | "options";
   label: string;
   minWidth?: number;
   align?: "right" | "center";
@@ -72,8 +72,13 @@ interface Producto {
   stock: string;
   supplier: string;
 }
-
-
+interface Supplier {
+  id: string;
+  phone: string;
+  email: string;
+  name: string;
+  supplierName: string;
+}
 const productDefault = {
   id: "",
   name: "",
@@ -89,6 +94,7 @@ export const ProductLists = () => {
   const [productToEdit, setProductToEdit] = useState<Producto>(productDefault);
   const { db } = useContext(AuthContext);
   const [rows, setRows] = useState<Data[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [page, setPage] = useState(0);
@@ -105,8 +111,7 @@ export const ProductLists = () => {
     setProducts(newProductArray);
     const rowsFormatted = newProductArray.map((p) => createData(p));
     setRows(rowsFormatted);
-
-  }
+  };
 
   const addProduct = async () => {
     const newProduct = {
@@ -115,13 +120,10 @@ export const ProductLists = () => {
       category: productToEdit.category,
       supplier: productToEdit.supplier,
       stock: productToEdit.stock,
-      price: productToEdit.price
-    }
+      price: productToEdit.price,
+    };
     const docRef = await addDoc(collection(db, "productos"), newProduct);
-    const newProductArray = [
-      ...product,
-      { id: docRef.id, ...newProduct },
-    ];
+    const newProductArray = [...product, { id: docRef.id, ...newProduct }];
     setProducts(newProductArray);
     const rowsFormatted = newProductArray.map((p) => createData(p));
     setRows(rowsFormatted);
@@ -130,8 +132,28 @@ export const ProductLists = () => {
 
   const fetchProducts = async () => {
     const allProducts = await getWholeDocumentByName(db, "productos");
-    setProducts(allProducts);
-    const rowsFormatted = allProducts.map((u) => createData(u));
+    const allSuppliers = await getWholeDocumentByName(db, "proveedor");
+    console.log("allSuppliers");
+    console.log(allSuppliers);
+    const productsFormatted: Producto[] = allProducts.map((p) => {
+      const supplier =
+        allSuppliers.find((s) => s.id === p.supplier).supplierName ||
+        "not found";
+      console.log("supplier");
+      console.log(supplier);
+      return { ...p, supplier };
+    });
+    setProducts(productsFormatted);
+    setSuppliers(
+      allSuppliers.map((s) => ({
+        id: s.id,
+        phone: s.Telefono,
+        email: s.email,
+        name: s.name,
+        supplierName: s.supplierName,
+      }))
+    );
+    const rowsFormatted = productsFormatted.map((u) => createData(u));
     setRows(rowsFormatted);
   };
 
@@ -142,20 +164,20 @@ export const ProductLists = () => {
       category: productToEdit.category,
       supplier: productToEdit.supplier,
       stock: productToEdit.stock,
-      price: productToEdit.price
+      price: productToEdit.price,
     });
     const newProductArray = product.map((p) =>
       p.id !== productToEdit.id
         ? p
         : {
-          ...p,
-          name: productToEdit.name,
-          description: productToEdit.description,
-          category: productToEdit.category,
-          supplier: productToEdit.supplier,
-          stock: productToEdit.stock,
-          price: productToEdit.price
-        }
+            ...p,
+            name: productToEdit.name,
+            description: productToEdit.description,
+            category: productToEdit.category,
+            supplier: productToEdit.supplier,
+            stock: productToEdit.stock,
+            price: productToEdit.price,
+          }
     );
     setProducts(newProductArray);
     const rowsFormatted = newProductArray.map((p) => createData(p));
@@ -184,16 +206,19 @@ export const ProductLists = () => {
           >
             <EditIcon />
           </IconButton>
-          <IconButton aria-label="delete" size="large" onClick={() => {
-            deleteById(products.id)
-          }} >
+          <IconButton
+            aria-label="delete"
+            size="large"
+            onClick={() => {
+              deleteById(products.id);
+            }}
+          >
             <DeleteIcon />
-          </IconButton> 
+          </IconButton>
         </Box>
       ),
     };
   };
-
 
   const columns: readonly Column[] = [
     { id: "name", label: "Nombre del Producto" },
@@ -258,7 +283,9 @@ export const ProductLists = () => {
             id="description"
             label="Descripcion"
             variant="outlined"
-            onChange={({ target: { value } }) => editField("description", value)}
+            onChange={({ target: { value } }) =>
+              editField("description", value)
+            }
             value={productToEdit.description}
             fullWidth
           />
@@ -299,7 +326,11 @@ export const ProductLists = () => {
             value={productToEdit.price}
             fullWidth
           />
-          <Button variant="contained" fullWidth onClick={() => (productToEdit.id ? updateProduct() : addProduct())}>
+          <Button
+            variant="contained"
+            fullWidth
+            onClick={() => (productToEdit.id ? updateProduct() : addProduct())}
+          >
             {isEdit ? "Editar" : "Agregar"}
           </Button>
         </FloatingWindow>
