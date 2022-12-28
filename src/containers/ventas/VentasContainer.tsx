@@ -195,6 +195,7 @@ export default function VentasContainer() {
         description: l.product.description,
         price: l.product.price,
         supplier: l.product.supplier,
+        category: l.product.category,
         stock: s < 0 ? 0 : s,
       });
     });

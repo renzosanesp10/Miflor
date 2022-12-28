@@ -136,8 +136,8 @@ export const ProductLists = () => {
     console.log("allSuppliers");
     console.log(allSuppliers);
     const productsFormatted: Producto[] = allProducts.map((p) => {
-      console.log("product")
-      console.log(p)
+      console.log("product");
+      console.log(p);
       const supplier =
         allSuppliers.find((s) => s.id === p.supplier)?.supplierName ||
         "not found";
@@ -164,7 +164,12 @@ export const ProductLists = () => {
       name: productToEdit.name,
       description: productToEdit.description,
       category: productToEdit.category,
-      supplier: productToEdit.supplier,
+      supplier:
+        suppliers.find(
+          (s) =>
+            s.id === productToEdit.supplier ||
+            s.supplierName === productToEdit.supplier
+        )?.id ?? "not found",
       stock: productToEdit.stock,
       price: productToEdit.price,
     });
@@ -176,7 +181,12 @@ export const ProductLists = () => {
             name: productToEdit.name,
             description: productToEdit.description,
             category: productToEdit.category,
-            supplier: productToEdit.supplier,
+            supplier:
+              suppliers.find(
+                (s) =>
+                  s.id === productToEdit.supplier ||
+                  s.supplierName === productToEdit.supplier
+              )?.supplierName ?? "not found",
             stock: productToEdit.stock,
             price: productToEdit.price,
           }
