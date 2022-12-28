@@ -181,7 +181,8 @@ export default function VentasContainer() {
       fecha: new Date().toLocaleDateString(),
       costoTotal: ventaToEdit.totalAmount,
       lineasDeVenta: ventaToEdit.lineasDeVentas.map((l) => ({
-        cantidad: l.quantity,
+        cantidad:
+          l.product.stock >= Number(l.quantity) ? l.quantity : l.product.stock,
         id: l.id,
         description: l.description,
         productoID: l.product.id,
@@ -190,7 +191,10 @@ export default function VentasContainer() {
     ventaToEdit.lineasDeVentas.forEach(async (l) => {
       const s = l.product.stock - Number(l.quantity);
       await setDoc(doc(db, "productos", l.product.id), {
-        ...l.product,
+        name: l.product.name,
+        description: l.product.description,
+        price: l.product.price,
+        supplier: l.product.supplier,
         stock: s < 0 ? 0 : s,
       });
     });
@@ -203,9 +207,12 @@ export default function VentasContainer() {
         id: docRef.id,
       },
     ];
+    fetchProducts();
     setVentas(newVentasArray);
     const rowsFormatted = newVentasArray.map((u) => createVentaRow(u));
     setRows(rowsFormatted);
+    setProductSelectedRow([]);
+    setVentaToEdit(ventaDefault);
     setIsOpenVentaModal(false);
   };
   const updateUser = async () => {
