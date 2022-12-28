@@ -106,7 +106,7 @@ export const UserLists = () => {
       rol: getRolByNameFromAllRoles(userToEdit.rol),
     };
     const docRef = await addDoc(collection(db, "usuarios"), newUser);
-    createUserWithEmailAndPassword(auth, userToEdit.email, password);
+    // createUserWithEmailAndPassword(auth, userToEdit.email, password);
     const newUsersArray = [
       ...users,
       { id: docRef.id, ...newUser, rol: userToEdit.rol },

@@ -136,8 +136,10 @@ export const ProductLists = () => {
     console.log("allSuppliers");
     console.log(allSuppliers);
     const productsFormatted: Producto[] = allProducts.map((p) => {
+      console.log("product")
+      console.log(p)
       const supplier =
-        allSuppliers.find((s) => s.id === p.supplier).supplierName ||
+        allSuppliers.find((s) => s.id === p.supplier)?.supplierName ||
         "not found";
       console.log("supplier");
       console.log(supplier);
